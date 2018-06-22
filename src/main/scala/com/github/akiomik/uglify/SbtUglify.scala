@@ -1,7 +1,7 @@
-package com.typesafe.sbt.uglify
+package com.github.akiomik.uglify
 
+import com.github.akiomik.proguard.Sbt10Compat
 import com.typesafe.sbt.jse.{SbtJsEngine, SbtJsTask}
-import com.typesafe.sbt.proguard.Sbt10Compat
 import com.typesafe.sbt.web.incremental._
 import com.typesafe.sbt.web.pipeline.Pipeline
 import com.typesafe.sbt.web.{Compat, PathMapping, SbtWeb, incremental}
@@ -16,17 +16,30 @@ object Import {
 
   val uglify = TaskKey[Pipeline.Stage]("uglify", "Perform UglifyJS optimization on the asset pipeline.")
 
+    val uglifyBeautify = settingKey[Boolean]("Enables beautify. Default: true")
+    val uglifyBeautifyOptions = settingKey[Seq[String]]("Options for beautify such as beautify, preamble etc. Default: Nil")
     val uglifyBuildDir = settingKey[File]("Where UglifyJS will copy source files and write minified files to. Default: resourceManaged / build")
     val uglifyComments = settingKey[Option[String]]("Specifies comments handling. Default: None")
     val uglifyCompress = settingKey[Boolean]("Enables compression. Default: true")
-    val uglifyCompressOptions = settingKey[Seq[String]]("Options for compression such as hoist_vars, if_return etc. Default: Nil")
+    val uglifyCompressOptions = settingKey[Seq[String]]("Options for compression such as pure_funcs etc. Default: Nil")
+    val uglifyConfigFile = settingKey[Option[File]]("Read minify() options from JSON file. Default: None")
     val uglifyDefine = settingKey[Option[String]]("Define globals. Default: None")
-    val uglifyEnclose = settingKey[Boolean]("Enclose in one big function. Default: false")
-    val uglifyIncludeSource = settingKey[Boolean]("Include the content of source files in the source map as the sourcesContent property. Default: false")
+    val uglifyEcma = settingKey[Option[Int]]("Specifies ECMAScript release. Default: None")
+    val uglifyIe8 = settingKey[Boolean]("Supports non-standard Internet Explorer 8. Default: false")
+    val uglifyKeepClassnames = settingKey[Boolean]("Does not mangle/drop class names. Default: false")
+    val uglifyKeepFnames = settingKey[Boolean]("Does not mangle/drop function names. Default: false")
     val uglifyMangle = settingKey[Boolean]("Enables name mangling. Default: true")
-    val uglifyMangleOptions = settingKey[Seq[String]]("Options for mangling such as sort, topLevel etc. Default: Nil")
-    val uglifyPreamble = settingKey[Option[String]]("Any preamble to include at the start of the output. Default: None")
-    val uglifyReserved = settingKey[Seq[String]]("Reserved names to exclude from mangling. Default: Nil")
+    val uglifyMangleOptions = settingKey[Seq[String]]("Options for mangling such as builtins, debug etc. Default: Nil")
+    val uglifyNameCache = settingKey[Option[File]]("Specifies a file to hold mangled name mappings. Default: None")
+    val uglifyParse = settingKey[Seq[String]]("Specifies parser options such as acorn, bare_returns etc. Default: Nil")
+    val uglifySafari10 = settingKey[Boolean]("Supports non-standard Safari 10/11. Default: false")
+    val uglifySelf = settingKey[Boolean]("Builds UglifyJS as a library. Default: false")
+    val uglifyTimings = settingKey[Boolean]("Displays operations run time on STDERR. Default: false")
+    val uglifyToplevel = settingKey[Boolean]("Compresses and/or mangles variables in top level scope. Default: false")
+    val uglifyVerbose = settingKey[Boolean]("Prints diagnostic messages. Default: false")
+    val uglifyWarn = settingKey[Boolean]("Prints warning messages. Default: false")
+    val uglifyWrap = settingKey[Option[String]]("Embed everything in a big function. Default: None")
+
     val uglifyOps = settingKey[UglifyOps.UglifyOpsMethod]("A function defining how to combine input files into output files. Default: UglifyOps.singleFileWithSourceMapOut")
 
   object UglifyOps {
@@ -93,12 +106,27 @@ object SbtUglify extends AutoPlugin {
   }
 
   override def projectSettings = Seq(
+    uglifyBeautify := true,
+    uglifyBeautifyOptions := Nil,
     uglifyBuildDir := (resourceManaged in uglify).value / "build",
     uglifyComments := None,
     uglifyCompress := true,
     uglifyCompressOptions := Nil,
+    uglifyConfigFile := None,
     uglifyDefine := None,
-    uglifyEnclose := false,
+    uglifyEcma := None,
+    uglifyIe8 := false,
+    uglifyKeepClassnames := false,
+    uglifyKeepFnames := false,
+    uglifyNameCache := None,
+    uglifyParse := Nil,
+    uglifySafari10 := false,
+    uglifySelf := false,
+    uglifyTimings := false,
+    uglifyToplevel := false,
+    uglifyVerbose := false,
+    uglifyWarn := false,
+    uglifyWrap := None,
     excludeFilter in uglify :=
       HiddenFileFilter ||
         GlobFilter("*.min.js") ||
@@ -106,12 +134,9 @@ object SbtUglify extends AutoPlugin {
           file.startsWith((WebKeys.webModuleDirectory in Assets).value)
         }),
     includeFilter in uglify := GlobFilter("*.js"),
-    uglifyIncludeSource := false,
     resourceManaged in uglify := webTarget.value / uglify.key.label,
     uglifyMangle := true,
     uglifyMangleOptions := Nil,
-    uglifyPreamble := None,
-    uglifyReserved := Nil,
     uglify := runOptimizer.dependsOn(webJarsNodeModules in Plugin).value,
     uglifyOps := singleFileWithSourceMapOut
   )
@@ -119,36 +144,61 @@ object SbtUglify extends AutoPlugin {
   private def runOptimizer: Def.Initialize[Task[Pipeline.Stage]] = Def.task {
     val include = (includeFilter in uglify).value
     val exclude = (excludeFilter in uglify).value
+    val beautifyValue = uglifyBeautify.value
+    val beautifyOpsValue = uglifyBeautifyOptions.value
     val buildDirValue = uglifyBuildDir.value
+    val configFileValue = uglifyConfigFile.value
+    val ecmaValue = uglifyEcma.value
+    val ie8Value = uglifyIe8.value
+    val keepClassnamesValue = uglifyKeepClassnames.value
+    val keepFnamesValue = uglifyKeepFnames.value
+    val nameCacheValue = uglifyNameCache.value
+    val parseValue = uglifyParse.value
+    val safari10Value = uglifySafari10.value
+    val selfValue = uglifySelf.value
+    val timingsValue = uglifyTimings.value
+    val toplevelValue = uglifyToplevel.value
+    val verboseValue = uglifyVerbose.value
+    val warnValue = uglifyWarn.value
+    val wrapValue = uglifyWrap.value
     val uglifyOpsValue = uglifyOps.value
     val streamsValue = streams.value
     val nodeModuleDirectoriesInPluginValue = (nodeModuleDirectories in Plugin).value
     val webJarsNodeModulesDirectoryInPluginValue = (webJarsNodeModulesDirectory in Plugin).value
     val mangleValue = uglifyMangle.value
     val mangleOptionsValue = uglifyMangleOptions.value
-    val reservedValue = uglifyReserved.value
     val compressValue = uglifyCompress.value
     val compressOptionsValue = uglifyCompressOptions.value
-    val encloseValue = uglifyEnclose.value
-    val includeSourceValue = uglifyIncludeSource.value
     val timeout = (timeoutPerSource in uglify).value
     val stateValue = state.value
     val engineTypeInUglifyValue = (engineType in uglify).value
     val commandInUglifyValue = (command in uglify).value
     val options = Seq(
+      beautifyValue,
+      beautifyOpsValue,
       uglifyComments.value,
       compressValue,
       compressOptionsValue,
+      configFileValue,
       uglifyDefine.value,
-      encloseValue,
+      ecmaValue,
+      ie8Value,
+      keepClassnamesValue,
+      keepFnamesValue,
+      nameCacheValue,
+      parseValue,
+      safari10Value,
+      selfValue,
+      timingsValue,
+      toplevelValue,
+      verboseValue,
+      warnValue,
+      wrapValue,
       (excludeFilter in uglify).value,
       (includeFilter in uglify).value,
       (resourceManaged in uglify).value,
       mangleValue,
-      mangleOptionsValue,
-      uglifyPreamble.value,
-      reservedValue,
-      includeSourceValue
+      mangleOptionsValue
     ).mkString("|")
 
     (mappings) => {
@@ -175,14 +225,18 @@ object SbtUglify extends AutoPlugin {
             streamsValue.log.info(s"Optimizing ${modifiedGroupings.size} JavaScript(s) with Uglify")
 
             val nodeModulePaths = nodeModuleDirectoriesInPluginValue.map(_.getPath)
-            val uglifyjsShell = webJarsNodeModulesDirectoryInPluginValue / "uglify-js" / "bin" / "uglifyjs"
+            val uglifyjsShell = webJarsNodeModulesDirectoryInPluginValue / "uglify-es" / "bin" / "uglifyjs"
 
+            val beautifyArgs = if (beautifyValue) {
+              val stdArg = Seq("--beautify")
+              if (beautifyOpsValue.isEmpty) stdArg else stdArg :+ beautifyOpsValue.mkString(",")
+            } else {
+              Nil
+            }
 
             val mangleArgs = if (mangleValue) {
               val stdArg = Seq("--mangle")
-              val stdArgWithOptions = if (mangleOptionsValue.isEmpty) stdArg else stdArg :+ mangleOptionsValue.mkString(",")
-              val reservedArgs = if (reservedValue.isEmpty) Nil else Seq("--reserved", reservedValue.mkString(","))
-              stdArgWithOptions ++ reservedArgs
+              if (mangleOptionsValue.isEmpty) stdArg else stdArg :+ mangleOptionsValue.mkString(",")
             } else {
               Nil
             }
@@ -196,24 +250,59 @@ object SbtUglify extends AutoPlugin {
 
             val defineArgs = uglifyDefine.value.map(Seq("--define", _)).getOrElse(Nil)
 
-            val encloseArgs = if (encloseValue) Seq("--enclose") else Nil
-
             val commentsArgs = uglifyComments.value.map(Seq("--comments", _)).getOrElse(Nil)
 
-            val preambleArgs = uglifyPreamble.value.map(Seq("--preamble", _)).getOrElse(Nil)
+            val configFileArgs = configFileValue.map(a => Seq("--config-file", a.getPath)).getOrElse(Nil)
 
-            val includeSourceArgs = if (includeSourceValue) Seq("--source-map-include-sources") else Nil
+            val ecmaArgs = ecmaValue.map(a => Seq("--ecma", a.toString)).getOrElse(Nil)
+
+            val ie8Args = if (ie8Value) Seq("--ie8") else Nil
+
+            val keepClassnamesArgs = if (keepClassnamesValue) Seq("--keep-classnames") else Nil
+
+            val keepFnamesArgs = if (keepFnamesValue) Seq("--keep-fnames") else Nil
+
+            val nameCacheArgs = nameCacheValue.map(a => Seq("--name-cache", a.getPath)).getOrElse(Nil)
+
+            val parseArgs = if (parseValue.isEmpty) Nil else Seq("--parse", parseValue.mkString(","))
+
+            val safari10Args = if (safari10Value) Seq("--safari10") else Nil
+
+            val selfArgs = if (selfValue) Seq("--self") else Nil
+
+            val timingsArgs = if (timingsValue) Seq("--timings") else Nil
+
+            val toplevelArgs = if (toplevelValue) Seq("--toplevel") else Nil
+
+            val verboseArgs = if (verboseValue) Seq("--verbose") else Nil
+
+            val warnArgs = if (warnValue) Seq("--warn") else Nil
+
+            val wrapArgs = wrapValue.map(Seq("--wrap", _)).getOrElse(Nil)
 
             val commonArgs =
               mangleArgs ++
                 compressArgs ++
                 defineArgs ++
-                encloseArgs ++
                 commentsArgs ++
-                preambleArgs ++
-                includeSourceArgs
+                beautifyArgs ++
+                configFileArgs ++
+                ecmaArgs ++
+                ie8Args ++
+                keepClassnamesArgs ++
+                keepFnamesArgs ++
+                nameCacheArgs ++
+                parseArgs ++
+                safari10Args ++
+                selfArgs ++
+                timingsArgs ++
+                toplevelArgs ++
+                verboseArgs ++
+                warnArgs ++
+                wrapArgs
 
             def executeUglify(args: Seq[String]) = monix.eval.Task {
+
               SbtJsTask.executeJs(
                 stateValue.copy(),
                 engineTypeInUglifyValue,
@@ -238,20 +327,21 @@ object SbtUglify extends AutoPlugin {
               IO.createDirectory(outputFile.getParentFile)
               val outputFileArgs = Seq("--output", outputFile.getPath)
 
-              val inputMapFileArgs = if (grouping.inputMapFile.isDefined) {
-                val inputMapFile = grouping.inputMapFile.map(_._1)
-                Seq("--in-source-map") ++ inputMapFile.map(_.getPath)
-              } else {
-                Nil
-              }
-
               val (outputMapFile, outputMapFileArgs) = if (grouping.outputMapFile.isDefined) {
                 val outputMapFile = buildDirValue / grouping.outputMapFile.get
                 IO.createDirectory(outputMapFile.getParentFile)
+
+                val content =
+                  if (grouping.inputMapFile.isDefined) {
+                    val inputMapFile = grouping.inputMapFile.map(_._1)
+                    s",content='${inputMapFile.map(_.getPath)}'"
+                  } else {
+                    ""
+                  }
+
                 (Some(outputMapFile), Seq(
-                  "--source-map", outputMapFile.getPath,
-                  "--source-map-url", outputMapFile.getName,
-                  "--prefix", "relative"))
+                  "--source-map",
+                  s"base='${outputMapFile.getParentFile}',url='${outputMapFile.getName}',filename='${outputFile.getName}'${content}"))
               } else {
                 (None, Nil)
               }
@@ -260,7 +350,6 @@ object SbtUglify extends AutoPlugin {
                 outputFileArgs ++
                   inputFileArgs ++
                   outputMapFileArgs ++
-                  inputMapFileArgs ++
                   commonArgs
 
 

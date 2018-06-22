@@ -1,1 +1,20 @@
 Copyright (C) 2013-2014 Typesafe Inc. <http://www.typesafe.com>
+
+------------
+
+Copyright (C) 2018 Akiomi KAMAKURA <https://github.com/akiomik>
+
+Changed files:
+
+  * CONTRIBUTING.md
+  * NOTICE
+  * README.md
+  * build.sbt
+  * version.sbt
+  * src/main/scala-sbt-0.13/com/typesafe/sbt/proguard/Sbt10Compat.scala
+  * src/main/scala-sbt-1.0/com/typesafe/sbt/proguard/Sbt10Compat.scala
+  * src/main/scala/com/typesafe/sbt/uglify/SbtUglify.scala
+  * src/sbt-test/sbt-uglify/uglify-concat/project/plugins.sbt
+  * src/sbt-test/sbt-uglify/uglify/build.sbt
+  * src/sbt-test/sbt-uglify/uglify/project/plugins.sbt
+  * version.sbt

@@ -1,4 +1,4 @@
-package com.typesafe.sbt.proguard
+package com.github.akiomik.proguard
 
 import sbt.Def
 import sbt.Keys.streams
