@@ -1,4 +1,4 @@
-addSbtPlugin("com.github.akiomik" % "sbt-uglify" % sys.props("project.version"))
+addSbtPlugin("com.github.akiomik" % "sbt-uglify-es" % sys.props("project.version"))
 
 resolvers ++= Seq(
   Resolver.mavenLocal,
