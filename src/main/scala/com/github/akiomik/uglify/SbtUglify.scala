@@ -331,17 +331,21 @@ object SbtUglify extends AutoPlugin {
                 val outputMapFile = buildDirValue / grouping.outputMapFile.get
                 IO.createDirectory(outputMapFile.getParentFile)
 
-                val content =
+                val outputMapFileOptionsBase = Seq(
+                  s"base='${outputMapFile.getParentFile}'",
+                  s"url='${outputMapFile.getName}'",
+                  s"filename='${outputFile.getName}'"
+                )
+
+                val outputMapFileOptions =
                   if (grouping.inputMapFile.isDefined) {
-                    val inputMapFile = grouping.inputMapFile.map(_._1)
-                    s",content='${inputMapFile.map(_.getPath)}'"
+                    val inputMapFile = grouping.inputMapFile.get._1
+                    outputMapFileOptionsBase :+ s"content='${inputMapFile.getPath}'"
                   } else {
-                    ""
+                    outputMapFileOptionsBase
                   }
 
-                (Some(outputMapFile), Seq(
-                  "--source-map",
-                  s"base='${outputMapFile.getParentFile}',url='${outputMapFile.getName}',filename='${outputFile.getName}'${content}"))
+                (Some(outputMapFile), Seq("--source-map", outputMapFileOptions.mkString(",")))
               } else {
                 (None, Nil)
               }
