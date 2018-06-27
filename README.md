@@ -1,5 +1,6 @@
 sbt-uglify-es
 =============
+[![Build Status](https://travis-ci.org/akiomik/sbt-uglify-es.svg?branch=master)](https://travis-ci.org/akiomik/sbt-uglify-es)
 
 An sbt-web plugin to perform [uglify-es optimization](https://github.com/mishoo/UglifyJS2/tree/harmony) on the asset pipeline.
 
