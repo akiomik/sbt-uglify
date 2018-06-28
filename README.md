@@ -1,13 +1,13 @@
 sbt-uglify-es
 =============
 [![Build Status](https://travis-ci.org/akiomik/sbt-uglify-es.svg?branch=master)](https://travis-ci.org/akiomik/sbt-uglify-es)
+[![Download](https://api.bintray.com/packages/akiomik/sbt-plugins/sbt-uglify-es/images/download.svg)](https://bintray.com/akiomik/sbt-plugins/sbt-uglify-es/_latestVersion)
+
 
 An sbt-web plugin to perform [uglify-es optimization](https://github.com/mishoo/UglifyJS2/tree/harmony) on the asset pipeline.
 
 Usage
 -----
-**This plugin is not published yet. So you have to clone this repository and execute `publishLocal`.**
-
 ```sh
 git clone git@github.com:akiomik/sbt-uglify-es.git
 cd sbt-uglify-es
@@ -17,7 +17,9 @@ sbt '^ publishLocal'
 To use this plugin, use the addSbtPlugin command within your project's `plugins.sbt` file:
 
 ```scala
-addSbtPlugin("com.github.akiomik" % "sbt-uglify-es" % "1.0.0-SNAPSHOT")
+resolvers += Resolver.url("sbt Plugin Repository", url("https://dl.bintray.com/akiomik/sbt-plugins/"))(Resolver.ivyStylePatterns)
+
+addSbtPlugin("com.github.akiomik" % "sbt-uglify-es" % "1.0.0")
 ```
 
 Your project's build file also needs to enable sbt-web plugins. For example, with build.sbt:
