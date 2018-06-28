@@ -8,12 +8,6 @@ An sbt-web plugin to perform [uglify-es optimization](https://github.com/mishoo/
 
 Usage
 -----
-```sh
-git clone git@github.com:akiomik/sbt-uglify-es.git
-cd sbt-uglify-es
-sbt '^ publishLocal'
-```
-
 To use this plugin, use the addSbtPlugin command within your project's `plugins.sbt` file:
 
 ```scala
