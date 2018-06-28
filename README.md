@@ -71,7 +71,7 @@ options):
 
 Option                  | Description                                                                                   | Default
 ------------------------|-----------------------------------------------------------------------------------------------|----------
-uglifyBeautify          | Enables beautify.                                                                             | `true`
+uglifyBeautify          | Enables beautify.                                                                             | `false`
 uglifyBeautifyOptions   | Options for beautify such as beautify, preamble etc.                                          | `Nil`
 uglifyComments          | Specifies comments handling.                                                                  | `None`
 uglifyCompress          | Enables compression. Set true to compress.                                                    | `true`

@@ -16,7 +16,7 @@ object Import {
 
   val uglify = TaskKey[Pipeline.Stage]("uglify", "Perform UglifyJS optimization on the asset pipeline.")
 
-    val uglifyBeautify        = settingKey[Boolean]("Enables beautify. Default: true")
+    val uglifyBeautify        = settingKey[Boolean]("Enables beautify. Default: false")
     val uglifyBeautifyOptions = settingKey[Seq[String]]("Options for beautify such as beautify, preamble etc. Default: Nil")
     val uglifyBuildDir        = settingKey[File]("Where UglifyJS will copy source files and write minified files to. Default: resourceManaged / build")
     val uglifyComments        = settingKey[Option[String]]("Specifies comments handling. Default: None")
@@ -105,7 +105,7 @@ object SbtUglify extends AutoPlugin {
   }
 
   override def projectSettings = Seq(
-    uglifyBeautify        := true,
+    uglifyBeautify        := false,
     uglifyBeautifyOptions := Nil,
     uglifyBuildDir        := (resourceManaged in uglify).value / "build",
     uglifyComments        := None,
